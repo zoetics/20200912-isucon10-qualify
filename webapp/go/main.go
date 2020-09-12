@@ -12,6 +12,9 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"context"
+	"unsafe"
+	"github.com/go-redis/redis/v8"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
@@ -27,6 +30,8 @@ var db *sqlx.DB
 var mySQLConnectionData *MySQLConnectionEnv
 var chairSearchCondition ChairSearchCondition
 var estateSearchCondition EstateSearchCondition
+
+var ctx = context.Background()
 
 type InitializeResponse struct {
 	Language string `json:"language"`
@@ -600,8 +605,15 @@ func getChairSearchCondition(c echo.Context) error {
 // ストックがある、最低価格のイス一覧
 func getLowPricedChair(c echo.Context) error {
 	var chairs []Chair
+	rdb := RedisNewClient()
+	res, err := rdb.Get(ctx, "low_chairs").Result()
+	if err != redis.Nil {
+		s := *(*[]byte)(unsafe.Pointer(&res))
+		json.Unmarshal(s, &chairs)
+		return c.JSON(http.StatusOK, ChairListResponse{Chairs: chairs})
+	}
 	query := `SELECT * FROM chair WHERE stock > 0 ORDER BY price ASC, id ASC LIMIT ?`
-	err := db.Select(&chairs, query, Limit)
+	err = db.Select(&chairs, query, Limit)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			c.Logger().Error("getLowPricedChair not found")
@@ -610,6 +622,8 @@ func getLowPricedChair(c echo.Context) error {
 		c.Logger().Errorf("getLowPricedChair DB execution error : %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
+	j, _ := json.Marshal(chairs)
+	rdb.Set(ctx, "low_chairs", string(j), 0).Err()
 
 	return c.JSON(http.StatusOK, ChairListResponse{Chairs: chairs})
 }
@@ -1005,4 +1019,12 @@ func (cs Coordinates) coordinatesToText() string {
 		points = append(points, fmt.Sprintf("%f %f", c.Latitude, c.Longitude))
 	}
 	return fmt.Sprintf("'POLYGON((%s))'", strings.Join(points, ","))
+}
+
+func RedisNewClient() *redis.Client {
+	return redis.NewClient(&redis.Options{
+		Addr:     "localhost:6379",
+		Password: "", // no password set
+		DB:       0,  // use default DB
+	})
 }
