@@ -6,7 +6,6 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
-	"github.com/go-redis/redis/v8"
 	"io/ioutil"
 	syslog "log"
 	"net/http"
@@ -18,12 +17,15 @@ import (
 	"strings"
 	"unsafe"
 
+	"github.com/go-redis/redis/v8"
+
+	_ "net/http/pprof"
+
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
 	"github.com/labstack/gommon/log"
-	_ "net/http/pprof"
 )
 
 const Limit = 20
@@ -407,7 +409,8 @@ func postChair(c echo.Context) error {
 		}
 	}
 	rdb := RedisNewClient()
-	rdb.Del(ctx, "low_chairs");
+	rdb.Del(ctx, "low_chairs")
+	// rdb.Del(ctx, "low_estates")
 	if err := tx.Commit(); err != nil {
 		c.Logger().Errorf("failed to commit tx: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
@@ -847,8 +850,17 @@ func searchEstates(c echo.Context) error {
 // 建物の最低価格を取得
 func getLowPricedEstate(c echo.Context) error {
 	estates := make([]Estate, 0, Limit)
+	rdb := RedisNewClient()
+	res, err := rdb.Get(ctx, "low_estates").Result()
+	if err != redis.Nil {
+		s := *(*[]byte)(unsafe.Pointer(&res))
+		json.Unmarshal(s, &estates)
+		if len(estates) != 0 {
+			return c.JSON(http.StatusOK, EstateListResponse{Estates: estates})
+		}
+	}
 	query := `SELECT * FROM estate ORDER BY rent ASC, id ASC LIMIT ?`
-	err := db.Select(&estates, query, Limit)
+	err = db.Select(&estates, query, Limit)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			c.Logger().Error("getLowPricedEstate not found")
@@ -857,6 +869,8 @@ func getLowPricedEstate(c echo.Context) error {
 		c.Logger().Errorf("getLowPricedEstate DB execution error : %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
+	j, _ := json.Marshal(estates)
+	rdb.Set(ctx, "low_estates", string(j), 0).Err()
 
 	return c.JSON(http.StatusOK, EstateListResponse{Estates: estates})
 }
