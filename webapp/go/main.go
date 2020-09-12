@@ -284,6 +284,7 @@ func main() {
 	e.Logger.Fatal(e.Start(serverPort))
 }
 
+// ここで毎回データ投入
 func initialize(c echo.Context) error {
 	sqlDir := filepath.Join("..", "mysql", "db")
 	paths := []string{
@@ -313,6 +314,7 @@ func initialize(c echo.Context) error {
 	})
 }
 
+// イスの詳細, idで検索
 func getChairDetail(c echo.Context) error {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -338,6 +340,7 @@ func getChairDetail(c echo.Context) error {
 	return c.JSON(http.StatusOK, chair)
 }
 
+// イスの購入処理: RollBack 処理を含有
 func postChair(c echo.Context) error {
 	header, err := c.FormFile("chairs")
 	if err != nil {
@@ -361,6 +364,8 @@ func postChair(c echo.Context) error {
 		c.Logger().Errorf("failed to begin tx: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
+
+	// Rollback処理
 	defer tx.Rollback()
 	for _, row := range records {
 		rm := RecordMapper{Record: row}
@@ -394,6 +399,8 @@ func postChair(c echo.Context) error {
 	return c.NoContent(http.StatusCreated)
 }
 
+// イスの情報を取得
+//  L 値段・高さ・幅・深さを計算、特徴・色・種類 をクエリする
 func searchChairs(c echo.Context) error {
 	conditions := make([]string, 0)
 	params := make([]interface{}, 0)
@@ -502,6 +509,7 @@ func searchChairs(c echo.Context) error {
 		return c.NoContent(http.StatusBadRequest)
 	}
 
+	// 一回で取得できるのでは？
 	searchQuery := "SELECT * FROM chair WHERE "
 	countQuery := "SELECT COUNT(*) FROM chair WHERE "
 	searchCondition := strings.Join(conditions, " AND ")
@@ -530,6 +538,7 @@ func searchChairs(c echo.Context) error {
 	return c.JSON(http.StatusOK, res)
 }
 
+// イスの購入処理
 func buyChair(c echo.Context) error {
 	m := echo.Map{}
 	if err := c.Bind(&m); err != nil {
@@ -557,6 +566,7 @@ func buyChair(c echo.Context) error {
 	defer tx.Rollback()
 
 	var chair Chair
+	// select ForUpdate
 	err = tx.QueryRowx("SELECT * FROM chair WHERE id = ? AND stock > 0 FOR UPDATE", id).StructScan(&chair)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -582,10 +592,12 @@ func buyChair(c echo.Context) error {
 	return c.NoContent(http.StatusOK)
 }
 
+// json 変換処理？
 func getChairSearchCondition(c echo.Context) error {
 	return c.JSON(http.StatusOK, chairSearchCondition)
 }
 
+//
 func getLowPricedChair(c echo.Context) error {
 	var chairs []Chair
 	query := `SELECT * FROM chair WHERE stock > 0 ORDER BY price ASC, id ASC LIMIT ?`
