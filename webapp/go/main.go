@@ -860,14 +860,36 @@ func searchRecommendedEstateWithChair(c echo.Context) error {
 	h := chair.Height
 	d := chair.Depth
 	// OR 条件 たくさんつながってるので分割するなりなんなりしないとまずい
-	query = `select id, thumbnail, address, rent, name, latitude, longitude, door_height, door_width, features, popularity, description from (
-				SELECT id, thumbnail, address, rent, name, latitude, longitude, door_height, door_width, features, popularity FROM estate WHERE (door_width >= ? AND door_height >= ?)
-				union all SELECT id, thumbnail, address, rent, name, latitude, longitude, door_height, door_width, features, popularity , description FROM estate WHERE (door_width >= ? AND door_height >= ?)
-				union all SELECT id, thumbnail, address, rent, name, latitude, longitude, door_height, door_width, features, popularity , description FROM estate WHERE (door_width >= ? AND door_height >= ?)
-				union all SELECT id, thumbnail, address, rent, name, latitude, longitude, door_height, door_width, features, popularity , description FROM estate WHERE (door_width >= ? AND door_height >= ?)
-				union all SELECT id, thumbnail, address, rent, name, latitude, longitude, door_height, door_width, features, popularity , description FROM estate WHERE (door_width >= ? AND door_height >= ?)
-				union all SELECT id, thumbnail, address, rent, name, latitude, longitude, door_height, door_width, features, popularity , description FROM estate WHERE (door_width >= ? AND door_height >= ?)
-			) data ORDER BY data.popularity DESC, data.id group by data.id ASC LIMIT ?`
+
+	query =
+		`select
+		estate.id, estate.thumbnail, estate.address, estate.rent, estate.name, estate.latitude, estate.longitude,
+		estate.door_height, estate.door_width, estate.features, estate.popularity,
+		estate.description
+	from estate
+	where estate.id in (
+		SELECT id FROM estate WHERE (door_width >= ? AND door_height >= ?)
+		union all
+		SELECT id FROM estate WHERE (door_width >= ? AND door_height >= ?)
+		union all
+		SELECT id FROM estate WHERE (door_width >= ? AND door_height >= ?)
+		union all
+		SELECT id FROM estate WHERE (door_width >= ? AND door_height >= ?)
+		union all
+		SELECT id FROM estate WHERE (door_width >= ? AND door_height >= ?)
+		union all
+		SELECT id FROM estate WHERE (door_width >= ? AND door_height >= ?)
+	)
+	ORDER BY estate.popularity DESC, estate.id ASC LIMIT ?`
+
+	// query = `select id, thumbnail, address, rent, name, latitude, longitude, door_height, door_width, features, popularity, description from (
+	// 			SELECT id, thumbnail, address, rent, name, latitude, longitude, door_height, door_width, features, popularity FROM estate WHERE (door_width >= ? AND door_height >= ?)
+	// 			union all SELECT id, thumbnail, address, rent, name, latitude, longitude, door_height, door_width, features, popularity , description FROM estate WHERE (door_width >= ? AND door_height >= ?)
+	// 			union all SELECT id, thumbnail, address, rent, name, latitude, longitude, door_height, door_width, features, popularity , description FROM estate WHERE (door_width >= ? AND door_height >= ?)
+	// 			union all SELECT id, thumbnail, address, rent, name, latitude, longitude, door_height, door_width, features, popularity , description FROM estate WHERE (door_width >= ? AND door_height >= ?)
+	// 			union all SELECT id, thumbnail, address, rent, name, latitude, longitude, door_height, door_width, features, popularity , description FROM estate WHERE (door_width >= ? AND door_height >= ?)
+	// 			union all SELECT id, thumbnail, address, rent, name, latitude, longitude, door_height, door_width, features, popularity , description FROM estate WHERE (door_width >= ? AND door_height >= ?)
+	// 		) data ORDER BY data.popularity DESC, data.id group by data.id ASC LIMIT ?`
 	err = db.Select(&estates, query, w, h, w, d, h, w, h, d, d, w, d, h, Limit)
 	if err != nil {
 		if err == sql.ErrNoRows {
