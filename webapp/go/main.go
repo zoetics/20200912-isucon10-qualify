@@ -790,7 +790,7 @@ func searchEstates(c echo.Context) error {
 
 	// 同時に取得できるのでは？
 	searchQuery := "SELECT * FROM estate WHERE "
-	countQuery := "SELECT COUNT(*) FROM estate WHERE "
+	countQuery := "SELECT COUNT(id) FROM estate WHERE "
 	searchCondition := strings.Join(conditions, " AND ")
 	limitOffset := " ORDER BY popularity DESC, id ASC LIMIT ? OFFSET ?"
 
