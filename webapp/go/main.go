@@ -1,26 +1,29 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
+	"github.com/go-redis/redis/v8"
 	"io/ioutil"
+	syslog "log"
 	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
-	"context"
 	"unsafe"
-	"github.com/go-redis/redis/v8"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
 	"github.com/labstack/gommon/log"
+	_ "net/http/pprof"
 )
 
 const Limit = 20
@@ -244,6 +247,12 @@ func init() {
 }
 
 func main() {
+	runtime.SetBlockProfileRate(1)
+	runtime.SetMutexProfileFraction(1)
+	go func() {
+		syslog.Println(http.ListenAndServe("0.0.0.0:6060", nil))
+	}()
+
 	// Echo instance
 	e := echo.New()
 	e.Debug = true
@@ -572,7 +581,7 @@ func buyChair(c echo.Context) error {
 
 	var chair Chair
 	// select ForUpdate
-	err = tx.QueryRowx("SELECT * FROM chair WHERE id = ? AND stock > 0 FOR UPDATE", id).StructScan(&chair)
+	err = tx.QueryRowx("SELECT * FROM chair WHERE id = ? AND stock > 0 FOR UPDATE SKIP LOCKED", id).StructScan(&chair)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			c.Echo().Logger.Infof("buyChair chair id \"%v\" not found", id)
@@ -803,8 +812,8 @@ func searchEstates(c echo.Context) error {
 	}
 
 	// 同時に取得できるのでは？
-	searchQuery := "SELECT * FROM estate WHERE "
-	countQuery := "SELECT COUNT(*) FROM estate WHERE "
+	searchQuery := "SELECT id, thumbnail, address, rent, name, latitude, longitude, door_height, door_width, features, popularity, description FROM estate WHERE "
+	countQuery := "SELECT COUNT(id) FROM estate WHERE "
 	searchCondition := strings.Join(conditions, " AND ")
 	limitOffset := " ORDER BY popularity DESC, id ASC LIMIT ? OFFSET ?"
 
