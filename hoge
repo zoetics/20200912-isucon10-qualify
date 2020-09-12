@@ -1,0 +1,15 @@
+explain SELECT id , thumbnail, address, rent, name FROM estate WHERE (door_width >= 1 AND door_height >= 1) OR (door_width >= 1 AND door_height >= 1) OR (door_width >= 1 AND door_height >= 1) OR (door_width >= 1 AND door_height >= 1) OR (door_width >= 1 AND door_height >= 1) OR (door_width >= 1 AND door_height >= 1) ORDER BY popularity DESC, id ASC LIMIT 100;
+	 		 
+
+
+
+explain
+select id, thumbnail, address, rent, name, popularity from (
+	SELECT id, thumbnail, address, rent, name, popularity FROM estate WHERE (door_width >= 1 AND door_height >= 1)
+	union all SELECT id, thumbnail, address, rent, name, popularity FROM estate WHERE (door_width >= 1 AND door_height >= 1)
+	union all SELECT id, thumbnail, address, rent, name, popularity FROM estate WHERE (door_width >= 2 AND door_height >= 3)
+	union all SELECT id, thumbnail, address, rent, name, popularity FROM estate WHERE (door_width >= 3 AND door_height >= 1)
+	union all SELECT id, thumbnail, address, rent, name,popularity FROM estate WHERE (door_width >= 3 AND door_height >= 2)
+	union all SELECT id, thumbnail, address, rent, name, popularity FROM estate WHERE (door_width >= 1 AND door_height >= 3)
+) data
+ORDER BY data.popularity DESC, data.id ASC LIMIT 100;
