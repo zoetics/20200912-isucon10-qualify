@@ -1036,7 +1036,7 @@ func (cs Coordinates) coordinatesToText() string {
 
 func RedisNewClient() *redis.Client {
 	return redis.NewClient(&redis.Options{
-		Addr:     "localhost:6379",
+		Addr:     "10.160.18.103:6379",
 		Password: "", // no password set
 		DB:       0,  // use default DB
 	})
