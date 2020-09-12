@@ -835,6 +835,7 @@ func getLowPricedEstate(c echo.Context) error {
 }
 
 // おすすめ物件の一覧
+//  L お金、住所、名前、thumbnail
 func searchRecommendedEstateWithChair(c echo.Context) error {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -859,7 +860,14 @@ func searchRecommendedEstateWithChair(c echo.Context) error {
 	h := chair.Height
 	d := chair.Depth
 	// OR 条件 たくさんつながってるので分割するなりなんなりしないとまずい
-	query = `SELECT * FROM estate WHERE (door_width >= ? AND door_height >= ?) OR (door_width >= ? AND door_height >= ?) OR (door_width >= ? AND door_height >= ?) OR (door_width >= ? AND door_height >= ?) OR (door_width >= ? AND door_height >= ?) OR (door_width >= ? AND door_height >= ?) ORDER BY popularity DESC, id ASC LIMIT ?`
+	query = `select id, thumbnail, address, rent, name, popularity from (
+				SELECT id, thumbnail, address, rent, name, popularity FROM estate WHERE (door_width >= ? AND door_height >= ?)
+				union all SELECT id, thumbnail, address, rent, name, popularity FROM estate WHERE (door_width >= ? AND door_height >= ?)
+				union all SELECT id, thumbnail, address, rent, name, popularity FROM estate WHERE (door_width >= ? AND door_height >= ?)
+				union all SELECT id, thumbnail, address, rent, name, popularity FROM estate WHERE (door_width >= ? AND door_height >= ?)
+				union all SELECT id, thumbnail, address, rent, name, popularity FROM estate WHERE (door_width >= ? AND door_height >= ?)
+				union all SELECT id, thumbnail, address, rent, name, popularity FROM estate WHERE (door_width >= ? AND door_height >= ?)
+			) data ORDER BY data.popularity DESC, data.id ASC LIMIT ?`
 	err = db.Select(&estates, query, w, h, w, d, h, w, h, d, d, w, d, h, Limit)
 	if err != nil {
 		if err == sql.ErrNoRows {
