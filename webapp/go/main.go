@@ -621,7 +621,9 @@ func getLowPricedChair(c echo.Context) error {
 	if err != redis.Nil {
 		s := *(*[]byte)(unsafe.Pointer(&res))
 		json.Unmarshal(s, &chairs)
-		return c.JSON(http.StatusOK, ChairListResponse{Chairs: chairs})
+		if len(chairs) != 0 {
+			return c.JSON(http.StatusOK, ChairListResponse{Chairs: chairs})
+		}
 	}
 	query := `SELECT * FROM chair WHERE stock > 0 ORDER BY price ASC, id ASC LIMIT ?`
 	err = db.Select(&chairs, query, Limit)
