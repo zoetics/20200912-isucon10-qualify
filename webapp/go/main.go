@@ -406,6 +406,8 @@ func postChair(c echo.Context) error {
 			return c.NoContent(http.StatusInternalServerError)
 		}
 	}
+	rdb := RedisNewClient()
+	rdb.Del(ctx, "low_chairs");
 	if err := tx.Commit(); err != nil {
 		c.Logger().Errorf("failed to commit tx: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
