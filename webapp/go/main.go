@@ -409,7 +409,8 @@ func postChair(c echo.Context) error {
 		}
 	}
 	rdb := RedisNewClient()
-	rdb.Del(ctx, "low_chairs");
+	rdb.Del(ctx, "low_chairs")
+	rdb.Del(ctx, "low_estates")
 	if err := tx.Commit(); err != nil {
 		c.Logger().Errorf("failed to commit tx: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
@@ -854,7 +855,9 @@ func getLowPricedEstate(c echo.Context) error {
 	if err != redis.Nil {
 		s := *(*[]byte)(unsafe.Pointer(&res))
 		json.Unmarshal(s, &estates)
-		return c.JSON(http.StatusOK, EstateListResponse{Estates: estates})
+		if len(estates) != 0 {
+			return c.JSON(http.StatusOK, EstateListResponse{Estates: estates})
+		}
 	}
 	query := `SELECT * FROM estate ORDER BY rent ASC, id ASC LIMIT ?`
 	err = db.Select(&estates, query, Limit)
