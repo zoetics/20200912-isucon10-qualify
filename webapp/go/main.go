@@ -6,17 +6,18 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	syslog "log"
 	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
-	"runtime"
-	syslog "log"
+
+	_ "net/http/pprof"
 
 	_ "github.com/go-sql-driver/mysql"
-	_ "net/http/pprof"
 	"github.com/jmoiron/sqlx"
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
@@ -519,8 +520,8 @@ func searchChairs(c echo.Context) error {
 	}
 
 	// 一回で取得できるのでは？
-	searchQuery := "SELECT * FROM chair WHERE "
-	countQuery := "SELECT COUNT(*) FROM chair WHERE "
+	searchQuery := "SELECT id, name, description, thumbnail, price , height, width, depth, color, features, kind FROM chair WHERE "
+	countQuery := "SELECT COUNT(id) FROM chair WHERE "
 	searchCondition := strings.Join(conditions, " AND ")
 	limitOffset := " ORDER BY popularity DESC, id ASC LIMIT ? OFFSET ?"
 
