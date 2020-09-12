@@ -19,8 +19,6 @@ import (
 
 	"github.com/go-redis/redis/v8"
 
-	_ "net/http/pprof"
-
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
 	"github.com/labstack/echo"
