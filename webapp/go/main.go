@@ -597,7 +597,7 @@ func getChairSearchCondition(c echo.Context) error {
 	return c.JSON(http.StatusOK, chairSearchCondition)
 }
 
-//
+// ストックがある、最低価格のイス一覧
 func getLowPricedChair(c echo.Context) error {
 	var chairs []Chair
 	query := `SELECT * FROM chair WHERE stock > 0 ORDER BY price ASC, id ASC LIMIT ?`
@@ -614,6 +614,8 @@ func getLowPricedChair(c echo.Context) error {
 	return c.JSON(http.StatusOK, ChairListResponse{Chairs: chairs})
 }
 
+// id で指定された 建物の詳細情報
+//  L id : primary
 func getEstateDetail(c echo.Context) error {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -635,6 +637,7 @@ func getEstateDetail(c echo.Context) error {
 	return c.JSON(http.StatusOK, estate)
 }
 
+// range の 配列返す
 func getRange(cond RangeCondition, rangeID string) (*Range, error) {
 	RangeIndex, err := strconv.Atoi(rangeID)
 	if err != nil {
@@ -648,6 +651,7 @@ func getRange(cond RangeCondition, rangeID string) (*Range, error) {
 	return cond.Ranges[RangeIndex], nil
 }
 
+// 建物の新規追加
 func postEstate(c echo.Context) error {
 	header, err := c.FormFile("estates")
 	if err != nil {
@@ -703,6 +707,8 @@ func postEstate(c echo.Context) error {
 	return c.NoContent(http.StatusCreated)
 }
 
+// 建物の情報を取得
+//  L 値段・高さ・幅・深さを計算、特徴・色・種類 をクエリする
 func searchEstates(c echo.Context) error {
 	conditions := make([]string, 0)
 	params := make([]interface{}, 0)
@@ -782,6 +788,7 @@ func searchEstates(c echo.Context) error {
 		return c.NoContent(http.StatusBadRequest)
 	}
 
+	// 同時に取得できるのでは？
 	searchQuery := "SELECT * FROM estate WHERE "
 	countQuery := "SELECT COUNT(*) FROM estate WHERE "
 	searchCondition := strings.Join(conditions, " AND ")
@@ -810,6 +817,7 @@ func searchEstates(c echo.Context) error {
 	return c.JSON(http.StatusOK, res)
 }
 
+// 建物の最低価格を取得
 func getLowPricedEstate(c echo.Context) error {
 	estates := make([]Estate, 0, Limit)
 	query := `SELECT * FROM estate ORDER BY rent ASC, id ASC LIMIT ?`
@@ -826,6 +834,7 @@ func getLowPricedEstate(c echo.Context) error {
 	return c.JSON(http.StatusOK, EstateListResponse{Estates: estates})
 }
 
+// おすすめ物件の一覧
 func searchRecommendedEstateWithChair(c echo.Context) error {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -849,6 +858,7 @@ func searchRecommendedEstateWithChair(c echo.Context) error {
 	w := chair.Width
 	h := chair.Height
 	d := chair.Depth
+	// OR 条件 たくさんつながってるので分割するなりなんなりしないとまずい
 	query = `SELECT * FROM estate WHERE (door_width >= ? AND door_height >= ?) OR (door_width >= ? AND door_height >= ?) OR (door_width >= ? AND door_height >= ?) OR (door_width >= ? AND door_height >= ?) OR (door_width >= ? AND door_height >= ?) OR (door_width >= ? AND door_height >= ?) ORDER BY popularity DESC, id ASC LIMIT ?`
 	err = db.Select(&estates, query, w, h, w, d, h, w, h, d, d, w, d, h, Limit)
 	if err != nil {
@@ -862,6 +872,7 @@ func searchRecommendedEstateWithChair(c echo.Context) error {
 	return c.JSON(http.StatusOK, EstateListResponse{Estates: estates})
 }
 
+//
 func searchEstateNazotte(c echo.Context) error {
 	coordinates := Coordinates{}
 	err := c.Bind(&coordinates)
@@ -876,6 +887,8 @@ func searchEstateNazotte(c echo.Context) error {
 
 	b := coordinates.getBoundingBox()
 	estatesInBoundingBox := []Estate{}
+	// latitude 緯度 の範囲指定 , longitude 経度の範囲指定 で取得
+	//  L 左側右側の緯度経度の値を当てはめてクエリ
 	query := `SELECT * FROM estate WHERE latitude <= ? AND latitude >= ? AND longitude <= ? AND longitude >= ? ORDER BY popularity DESC, id ASC`
 	err = db.Select(&estatesInBoundingBox, query, b.BottomRightCorner.Latitude, b.TopLeftCorner.Latitude, b.BottomRightCorner.Longitude, b.TopLeftCorner.Longitude)
 	if err == sql.ErrNoRows {
@@ -912,6 +925,8 @@ func searchEstateNazotte(c echo.Context) error {
 	} else {
 		re.Estates = estatesInPolygon
 	}
+
+	// int64 コンバートは 遅い？
 	re.Count = int64(len(re.Estates))
 
 	return c.JSON(http.StatusOK, re)
@@ -954,6 +969,7 @@ func getEstateSearchCondition(c echo.Context) error {
 	return c.JSON(http.StatusOK, estateSearchCondition)
 }
 
+// 緯度経度の計算処理
 func (cs Coordinates) getBoundingBox() BoundingBox {
 	coordinates := cs.Coordinates
 	boundingBox := BoundingBox{
@@ -982,6 +998,7 @@ func (cs Coordinates) getBoundingBox() BoundingBox {
 	return boundingBox
 }
 
+// POLYGONへの変換処理
 func (cs Coordinates) coordinatesToText() string {
 	points := make([]string, 0, len(cs.Coordinates))
 	for _, c := range cs.Coordinates {
