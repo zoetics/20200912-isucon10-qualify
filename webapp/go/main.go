@@ -19,8 +19,6 @@ import (
 
 	"github.com/go-redis/redis/v8"
 
-	_ "net/http/pprof"
-
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
 	"github.com/labstack/echo"
@@ -249,12 +247,6 @@ func init() {
 }
 
 func main() {
-	runtime.SetBlockProfileRate(1)
-	runtime.SetMutexProfileFraction(1)
-	go func() {
-		syslog.Println(http.ListenAndServe("0.0.0.0:6060", nil))
-	}()
-
 	// Echo instance
 	e := echo.New()
 	e.Debug = true
