@@ -1,9 +1,9 @@
 DROP DATABASE IF EXISTS isuumo;
 CREATE DATABASE isuumo DEFAULT CHARACTER SET 'utf8mb4';
 
-set global long_query_time = 0.1;
-set global slow_query_log = ON;
-set global slow_query_log_file = '/tmp/mysql-slow.log';
+-- set global long_query_time = 0.1;
+-- set global slow_query_log = ON;
+-- set global slow_query_log_file = '/tmp/mysql-slow.log';
 
 DROP TABLE IF EXISTS isuumo.estate;
 DROP TABLE IF EXISTS isuumo.chair;

@@ -249,12 +249,6 @@ func init() {
 }
 
 func main() {
-	runtime.SetBlockProfileRate(1)
-	runtime.SetMutexProfileFraction(1)
-	go func() {
-		syslog.Println(http.ListenAndServe("0.0.0.0:6060", nil))
-	}()
-
 	// Echo instance
 	e := echo.New()
 	e.Debug = true
